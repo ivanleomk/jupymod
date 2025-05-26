@@ -6,6 +6,54 @@ from mcp.server.fastmcp import FastMCP
 mcp = FastMCP("jupyter-mcp")
 
 
+def _process_cells_to_xml(
+    cells: list, start_idx: int = 0, end_idx: int | None = None
+) -> list[str]:
+    """
+    Process notebook cells into XML format.
+
+    Args:
+        cells: List of notebook cells
+        start_idx: Starting index (inclusive)
+        end_idx: Ending index (exclusive), None for all cells
+
+    Returns:
+        List of XML strings representing the cells
+    """
+    xml_parts = []
+
+    for i, cell in enumerate(cells[start_idx:end_idx], start=start_idx):
+        if end_idx and i >= end_idx:
+            break
+        cell_type = cell["cell_type"]
+
+        # Join source lines into single content
+        content = (
+            "".join(cell["source"])
+            if isinstance(cell["source"], list)
+            else cell["source"]
+        )
+
+        xml_parts.append(f'<cell type="{cell_type}" id="{i}">')
+        xml_parts.append(content)
+        xml_parts.append("</cell>")
+
+        if cell_type == "code":
+            xml_parts.append("<outputs>")
+            for output in cell["outputs"]:
+                # Handle stdout output
+                if "name" in output and output["name"] == "stdout":
+                    xml_parts.append(f"{''.join(output['text'])}")
+                # Handle execution results
+                elif output["output_type"] == "execute_result":
+                    xml_parts.append(f"{''.join(output['data']['text/plain'])}")
+
+            xml_parts.append("</outputs>")
+            xml_parts.append("")
+
+    return xml_parts
+
+
 @mcp.tool()
 def get_markdown_representation(notebook_path: str) -> str:
     """
@@ -21,35 +69,44 @@ def get_markdown_representation(notebook_path: str) -> str:
         with open(notebook_path, "r") as f:
             notebook = json.load(f)
 
-        xml_parts = []
+        xml_parts = _process_cells_to_xml(notebook["cells"])
+        return "\n".join(xml_parts)
 
-        for i, cell in enumerate(notebook["cells"]):
-            cell_type = cell["cell_type"]
+    except Exception as e:
+        return f"Error reading notebook: {str(e)}"
 
-            # Join source lines into single content
-            content = (
-                "".join(cell["source"])
-                if isinstance(cell["source"], list)
-                else cell["source"]
-            )
 
-            xml_parts.append(f'<cell type="{cell_type}" id="{i}">')
-            xml_parts.append(content)
-            xml_parts.append("</cell>")
+@mcp.tool()
+def get_markdown_representation_subset(
+    notebook_path: str, start_idx: int, end_idx: int
+) -> str:
+    """
+    Get a clean XML representation of a subset of notebook cells.
 
-            if cell_type == "code":
-                xml_parts.append("<outputs>")
-                for output in cell["outputs"]:
-                    # Handle stdout output
-                    if "name" in output and output["name"] == "stdout":
-                        xml_parts.append(f"{''.join(output['text'])}")
-                    # Handle execution results
-                    elif output["output_type"] == "execute_result":
-                        xml_parts.append(f"{''.join(output['data']['text/plain'])}")
+    Args:
+        notebook_path: Path to the .ipynb file
+        start_idx: Starting cell index (inclusive, 0-based)
+        end_idx: Ending cell index (exclusive, 0-based)
 
-                xml_parts.append("</outputs>")
-                xml_parts.append("")
+    Returns:
+        XML string representation of the specified cell range
+    """
+    try:
+        with open(notebook_path, "r") as f:
+            notebook = json.load(f)
 
+        num_cells = len(notebook["cells"])
+
+        if start_idx < 0 or start_idx >= num_cells:
+            return f"Start index {start_idx} is out of range. Must be between 0 and {num_cells - 1}"
+
+        if end_idx < 0 or end_idx > num_cells:
+            return f"End index {end_idx} is out of range. Must be between 0 and {num_cells}"
+
+        if start_idx >= end_idx:
+            return f"Start index {start_idx} must be less than end index {end_idx}"
+
+        xml_parts = _process_cells_to_xml(notebook["cells"], start_idx, end_idx)
         return "\n".join(xml_parts)
 
     except Exception as e:
