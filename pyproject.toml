@@ -1,7 +1,7 @@
 [project]
-name = "jupyter-mcp"
+name = "jupymod"
 version = "0.1.0"
-description = "Add your description here"
+description = "A Model Context Protocol server for Jupyter notebooks - you still need to run your code lol"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
