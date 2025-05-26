@@ -242,3 +242,8 @@ def delete_cells(notebook_path: str, cell_indices: list[int]) -> str:
 
     except Exception as e:
         return f"Error deleting cells from notebook: {str(e)}"
+
+
+def main():
+    """Main entry point for the jupymod CLI script."""
+    mcp.run()

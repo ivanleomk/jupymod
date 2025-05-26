@@ -8,3 +8,9 @@ dependencies = [
     "mcp[cli]>=1.9.1",
     "ruff>=0.11.11",
 ]
+
+[project.scripts]
+jupymod = "jupymod.server:main"
+
+[tool.uv]
+package = true
