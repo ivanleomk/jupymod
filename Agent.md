@@ -1,0 +1,3 @@
+- Always run ruff to verify that your code typechecks
+- Before implementing something complicated, try the simplest approach first
+- Run your commands in the local python env, it is located at .venv at the root folder so that you had the right deps
